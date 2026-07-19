@@ -1,10 +1,8 @@
 #!/bin/bash
 set -e
 
-# Generate app key if not already set (safe to run every time; Laravel skips if already set in .env)
-if [ -z "$APP_KEY" ]; then
-    php artisan key:generate --force
-fi
+# APP_KEY must be set as an Environment Variable in the Render dashboard
+# (there is no .env file inside this container, so artisan key:generate would fail here)
 
 # Cache config, routes, and views for better performance
 php artisan config:cache
