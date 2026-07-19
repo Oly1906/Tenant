@@ -44,11 +44,11 @@
     @csrf
     <div class="form-group">
       <label>Email address</label>
-      <input type="email" name="email" value="{{ old('email') }}" placeholder="admin@example.com" required autofocus>
+      <input type="email" name="email" value="{{ old('email') }}" placeholder="  " required autofocus>
     </div>
     <div class="form-group">
       <label>Password</label>
-      <input type="password" name="password" placeholder="••••••••" required>
+      <input type="password" name="password" placeholder="   " required>
     </div>
     <button class="btn" type="submit">Sign In</button>
   </form>
