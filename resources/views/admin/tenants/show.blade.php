@@ -12,18 +12,18 @@
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
   <div class="card">
     <div class="card-title">Personal Info</div>
-    <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value">{{ $tenant->user->name }}</span></div>
-    <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">{{ $tenant->user->email }}</span></div>
-    <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value">{{ $tenant->user->phone ?? '–' }}</span></div>
+    <div class="detail-row"><span class="detail-label">Name : </span><span class="detail-value">{{ $tenant->user->name }}</span></div>
+    <div class="detail-row"><span class="detail-label">Email : </span><span class="detail-value">{{ $tenant->user->email }}</span></div>
+    <div class="detail-row"><span class="detail-label">Phone : </span><span class="detail-value">{{ $tenant->user->phone ?? '–' }}</span></div>
   </div>
   <div class="card">
     <div class="card-title">Lease Details</div>
-    <div class="detail-row"><span class="detail-label">Room</span><span class="detail-value">{{ $tenant->room->number }}</span></div>
-    <div class="detail-row"><span class="detail-label">Property</span><span class="detail-value">{{ $tenant->room->property->name }}</span></div>
-    <div class="detail-row"><span class="detail-label">Lease Start</span><span class="detail-value">{{ $tenant->lease_start->format('d M Y') }}</span></div>
-    <div class="detail-row"><span class="detail-label">Lease End</span><span class="detail-value">{{ $tenant->lease_end->format('d M Y') }}</span></div>
-    <div class="detail-row"><span class="detail-label">Monthly Rent</span><span class="detail-value">${{ number_format($tenant->room->price,2) }}</span></div>
-    <div class="detail-row"><span class="detail-label">Deposit</span><span class="detail-value">${{ number_format($tenant->deposit,2) }}</span></div>
+    <div class="detail-row"><span class="detail-label">Room : </span><span class="detail-value">{{ $tenant->room->number }}</span></div>
+    <div class="detail-row"><span class="detail-label">Property  : </span><span class="detail-value">{{ $tenant->room->property->name }}</span></div>
+    <div class="detail-row"><span class="detail-label">Lease Start : </span><span class="detail-value">{{ $tenant->lease_start->format('d M Y') }}</span></div>
+    <div class="detail-row"><span class="detail-label">Lease End : </span><span class="detail-value">{{ $tenant->lease_end->format('d M Y') }}</span></div>
+    <div class="detail-row"><span class="detail-label">Monthly Rent : </span><span class="detail-value">${{ number_format($tenant->room->price,2) }}</span></div>
+    <div class="detail-row"><span class="detail-label">Deposit : </span><span class="detail-value">${{ number_format($tenant->deposit,2) }}</span></div>
   </div>
 </div>
 

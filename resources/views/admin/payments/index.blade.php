@@ -14,17 +14,30 @@
 </div>
 <div class="card">
   <table>
-    <thead><tr><th>Tenant</th><th>Room</th><th>Month</th><th>Rent</th><th>Utilities</th><th>Total</th><th>Due</th><th>Paid</th><th>Status</th><th></th></tr></thead>
+    <thead>
+      <tr>
+        <th>Tenant</th>
+        <th>Room</th>
+        <th>Month</th>
+        <th>Rent</th>
+        <th>Utilities</th>
+        <th>Total</th>
+        {{-- <th>Due</th> --}}
+        <th>Paid</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
     <tbody>
       @foreach($invoices as $inv)
       <tr>
         <td>{{ $inv->tenant->user->name }}</td>
         <td>{{ $inv->tenant->room->number }}</td>
-        <td>{{ $inv->month->format('M Y') }}</td>
+        <td>{{ $inv->month->format('d M ') }}</td>
         <td>${{ number_format($inv->rent_amount,2) }}</td>
         <td>${{ number_format($inv->utility_amount,2) }}</td>
         <td style="font-weight:700;">${{ number_format($inv->total,2) }}</td>
-        <td>{{ $inv->due_date?->format('d M Y') ?? '–' }}</td>
+        {{-- <td>{{ $inv->due_date?->format('d M Y') ?? '–' }}</td> --}}
         <td>{{ $inv->paid_date?->format('d M Y') ?? '–' }}</td>
         <td><span class="badge {{ $inv->status==='paid' ? 'badge-green' : 'badge-orange' }}">{{ ucfirst($inv->status) }}</span></td>
         <td>

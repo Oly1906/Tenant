@@ -23,7 +23,9 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::resource('tenants',       Admin\TenantController::class);
     Route::resource('invoices',      Admin\InvoiceController::class)->except(['edit','update']);
     Route::resource('announcements', Admin\AnnouncementController::class)->except(['edit','update','show']);
+
     Route::resource('utilities', Admin\UtilityController::class)->except(['show']);
+    Route::get('/utilities/preview', [Admin\UtilityController::class, 'preview'])->name('utilities.preview'); 
     Route::resource('users', UserController::class)->except(['show']);
 
     Route::patch('/invoices/{invoice}/paid', [Admin\InvoiceController::class, 'markPaid'])

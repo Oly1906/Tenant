@@ -21,31 +21,58 @@ class UtilityController extends Controller
         return view('admin.utilities.create', compact('tenants'));
     }
 
+    protected function rules(): array
+    {
+        return [
+            'tenant_id'         => 'required|exists:tenants,id',
+            'month'             => 'required|string|max:20', // e.g. "Jul 2024"
+            'electricity_old'   => 'required|numeric|min:0',
+            'electricity_new'   => 'required|numeric|gte:electricity_old',
+            'electricity_rate'  => 'required|numeric|min:0',
+            'water_old'         => 'required|numeric|min:0',
+            'water_new'         => 'required|numeric|gte:water_old',
+            'water_rate'        => 'required|numeric|min:0',
+        ];
+    }
+
+    /**
+     * គណនាកម្រិតប្រើប្រាស់ (usage) និងថ្លៃ (cost) ពីលេខរាប់ ចាស់/ថ្មី
+     */
+    protected function computeCosts(array $data): array
+    {
+        $electricityUsage = $data['electricity_new'] - $data['electricity_old'];
+        $waterUsage        = $data['water_new'] - $data['water_old'];
+
+        $electricityCost = $electricityUsage * $data['electricity_rate'];
+        $waterCost        = $waterUsage * $data['water_rate'];
+
+        return [
+            'electricity_old'   => $data['electricity_old'],
+            'electricity_new'   => $data['electricity_new'],
+            'electricity_rate'  => $data['electricity_rate'],
+            'electricity_usage' => $electricityUsage,
+            'electricity_cost'  => $electricityCost,
+
+            'water_old'    => $data['water_old'],
+            'water_new'    => $data['water_new'],
+            'water_rate'   => $data['water_rate'],
+            'water_usage'  => $waterUsage,
+            'water_cost'   => $waterCost,
+
+            'total_cost'   => $electricityCost + $waterCost,
+        ];
+    }
+
     public function store(Request $request)
     {
-        $request->validate([
-            'tenant_id'        => 'required|exists:tenants,id',
-            'month'            => 'required|date',
-            'electricity_kwh'  => 'nullable|numeric|min:0',
-            'electricity_cost' => 'nullable|numeric|min:0',
-            'water_m3'         => 'nullable|numeric|min:0',
-            'water_cost'       => 'nullable|numeric|min:0',
-        ]);
-
-        $total = ($request->electricity_cost ?? 0) + ($request->water_cost ?? 0);
+        $data = $request->validate($this->rules());
 
         UtilityRecord::updateOrCreate(
             [
-                'tenant_id' => $request->tenant_id,
-                'month'     => $request->month,
+                'tenant_id' => $data['tenant_id'],
+                'month'     => $data['month'],
             ],
-            [
-                'electricity_kwh'  => $request->electricity_kwh  ?? 0,
-                'electricity_cost' => $request->electricity_cost ?? 0,
-                'water_m3'         => $request->water_m3         ?? 0,
-                'water_cost'       => $request->water_cost       ?? 0,
-                'total_cost'       => $total,
-            ]
+            $this->computeCosts($data)
         );
 
         return redirect()->route('admin.utilities.index')
@@ -59,24 +86,12 @@ class UtilityController extends Controller
 
     public function update(Request $request, UtilityRecord $utility)
     {
-        $request->validate([
-            'month'            => 'required|date',
-            'electricity_kwh'  => 'nullable|numeric|min:0',
-            'electricity_cost' => 'nullable|numeric|min:0',
-            'water_m3'         => 'nullable|numeric|min:0',
-            'water_cost'       => 'nullable|numeric|min:0',
-        ]);
+        $rules = $this->rules();
+        unset($rules['tenant_id']); // មិនអនុញ្ញាតឲ្យប្តូរអ្នកជួលពេល edit
 
-        $total = ($request->electricity_cost ?? 0) + ($request->water_cost ?? 0);
+        $data = $request->validate($rules);
 
-        $utility->update([
-            'month'            => $request->month,
-            'electricity_kwh'  => $request->electricity_kwh  ?? 0,
-            'electricity_cost' => $request->electricity_cost ?? 0,
-            'water_m3'         => $request->water_m3         ?? 0,
-            'water_cost'       => $request->water_cost       ?? 0,
-            'total_cost'       => $total,
-        ]);
+        $utility->update($this->computeCosts($data) + ['month' => $data['month']]);
 
         return redirect()->route('admin.utilities.index')
             ->with('success', 'Utility updated.');
@@ -87,4 +102,19 @@ class UtilityController extends Controller
         $utility->delete();
         return back()->with('success', 'Utility record deleted.');
     }
+    public function preview(Request $request)
+    {
+        $utility = UtilityRecord::where('tenant_id', $request->tenant_id)
+            ->where('month', $request->month)
+            ->first();
+
+        if (!$utility) {
+            return response()->json([
+                'error' => 'រកមិនឃើញ Utility Record សម្រាប់ខែនេះ — សូម Add Utility ជាមុន'
+            ]);
+        }
+
+        return response()->json($utility);
+    }
+
 }

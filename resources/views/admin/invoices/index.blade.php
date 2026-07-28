@@ -14,7 +14,7 @@
         <td style="font-weight:700;">{{ $inv->invoice_number }}</td>
         <td>{{ $inv->tenant->user->name }}</td>
         <td>{{ $inv->tenant->room->number }}</td>
-        <td>{{ $inv->month->format('M Y') }}</td>
+        <td>{{ $inv->month->format('d M Y') }}</td>
         <td>${{ number_format($inv->rent_amount,2) }}</td>
         <td>${{ number_format($inv->utility_amount,2) }}</td>
         <td style="font-weight:700;">${{ number_format($inv->total,2) }}</td>

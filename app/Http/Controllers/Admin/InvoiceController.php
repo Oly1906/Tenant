@@ -2,7 +2,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Invoice, Tenant, UtilityRecord};
+use App\Models\{Invoice, Tenant};
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -23,38 +23,58 @@ class InvoiceController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'tenant_id'      => 'required|exists:tenants,id',
-            'month'          => 'required|date',
-            'utility_amount' => 'nullable|numeric|min:0',
-            'due_date'       => 'nullable|date',
+            'tenant_id' => 'required|exists:tenants,id',
+            'type'      => 'required|in:rent,utility',
+            'month'     => 'required|date',
+            'due_date'  => 'nullable|date',
+            'rent_amount' => 'required_if:type,rent|nullable|numeric|min:0',
         ]);
 
-        $tenant  = Tenant::find($request->tenant_id);
-        $utility = $request->utility_amount ?? 0;
-        $total   = $tenant->room->price + $utility;
+        $number = 'INV-' . str_pad((Invoice::max('id') ?? 0) + 1, 4, '0', STR_PAD_LEFT);
 
-        // Create unique invoice number
-        do {
-            $lastId = Invoice::max('id') ?? 0;
-            $number = 'INV-' . str_pad($lastId + 1, 4, '0', STR_PAD_LEFT);
-            // If already exists, append a random suffix and retry
-            if (Invoice::where('invoice_number', $number)->exists()) {
-                $number .= '-' . rand(1, 99);
-            }
-        } while (Invoice::where('invoice_number', $number)->exists());
-
-        Invoice::create([
+        $data = [
             'invoice_number' => $number,
-            'tenant_id'      => $tenant->id,
-            'rent_amount'    => $tenant->room->price,
-            'utility_amount' => $utility,
-            'total'          => $total,
+            'tenant_id'      => $request->tenant_id,
+            'type'           => $request->type,
             'month'          => $request->month,
             'due_date'       => $request->due_date,
-        ]);
+            'status'         => 'pending',
+        ];
 
-        return redirect()->route('admin.invoices.index')
-            ->with('success', 'Invoice created.');
+        if ($request->type === 'rent') {
+            $data['rent_amount'] = $request->rent_amount;
+            $data['total']       = $request->rent_amount;
+        }
+
+        if ($request->type === 'utility') {
+            // ទាញ UtilityRecord ដែល add រួចហើយ (ខែដដែល)
+            $utility = UtilityRecord::where('tenant_id', $request->tenant_id)
+                ->where('month', $request->month)
+                ->first();
+
+            if (!$utility) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['month' => 'រកមិនឃើញ Utility Record សម្រាប់ខែ ' . $request->month . ' — សូម Add Utility ជាមុន។']);
+            }
+
+            $data += [
+                'electricity_old'   => $utility->electricity_old,
+                'electricity_new'   => $utility->electricity_new,
+                'electricity_rate'  => $utility->electricity_rate,
+                'electricity_usage' => $utility->electricity_usage,
+                'electricity_cost'  => $utility->electricity_cost,
+                'water_old'         => $utility->water_old,
+                'water_new'         => $utility->water_new,
+                'water_rate'        => $utility->water_rate,
+                'water_usage'       => $utility->water_usage,
+                'water_cost'        => $utility->water_cost,
+                'total'             => $utility->total_cost,
+            ];
+        }
+
+        Invoice::create($data);
+        return redirect()->route('admin.invoices.index')->with('success', 'Invoice created.');
     }
 
     public function markPaid(Invoice $invoice)
@@ -78,28 +98,53 @@ class InvoiceController extends Controller
 
     public function edit(Invoice $invoice)
     {
-        return view('admin.invoices.edit', compact('invoice'));
+        $tenants = Tenant::with(['user', 'room'])->where('status', 'active')->get();
+        return view('admin.invoices.edit', compact('invoice', 'tenants'));
     }
 
     public function update(Request $request, Invoice $invoice)
     {
         $request->validate([
-            'month'          => 'required|date',
-            'utility_amount' => 'nullable|numeric|min:0',
-            'due_date'       => 'nullable|date',
-            'status'         => 'required|in:pending,paid',
+            'month'    => 'required|date',
+            'due_date' => 'nullable|date',
+            'status'   => 'required|in:pending,paid',
         ]);
 
-        $total = $invoice->rent_amount + ($request->utility_amount ?? 0);
+        if ($invoice->type === 'rent') {
+            $invoice->update([
+                'rent_amount' => $request->rent_amount,
+                'total'       => $request->rent_amount,
+                'month'       => $request->month,
+                'due_date'    => $request->due_date,
+                'status'      => $request->status,
+                'paid_date'   => $request->status === 'paid' ? now() : null,
+            ]);
+        }
 
-        $invoice->update([
-            'utility_amount' => $request->utility_amount ?? 0,
-            'total'          => $total,
-            'month'          => $request->month,
-            'due_date'       => $request->due_date,
-            'status'         => $request->status,
-            'paid_date'      => $request->status === 'paid' ? now() : null,
-        ]);
+        if ($invoice->type === 'utility') {
+            $eUsage = $request->electricity_new - $request->electricity_old;
+            $eCost  = $eUsage * $request->electricity_rate;
+            $wUsage = $request->water_new - $request->water_old;
+            $wCost  = $wUsage * $request->water_rate;
+
+            $invoice->update([
+                'electricity_old'   => $request->electricity_old,
+                'electricity_new'   => $request->electricity_new,
+                'electricity_rate'  => $request->electricity_rate,
+                'electricity_usage' => $eUsage,
+                'electricity_cost'  => $eCost,
+                'water_old'         => $request->water_old,
+                'water_new'         => $request->water_new,
+                'water_rate'        => $request->water_rate,
+                'water_usage'       => $wUsage,
+                'water_cost'        => $wCost,
+                'total'             => $eCost + $wCost,
+                'month'             => $request->month,
+                'due_date'          => $request->due_date,
+                'status'            => $request->status,
+                'paid_date'         => $request->status === 'paid' ? now() : null,
+            ]);
+        }
 
         return redirect()->route('admin.invoices.index')->with('success', 'Invoice updated.');
     }

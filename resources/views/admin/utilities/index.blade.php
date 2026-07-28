@@ -25,7 +25,7 @@
       <tr>
         <td style="font-weight:600;">{{ $r->tenant->user->name }}</td>
         <td>{{ $r->tenant->room->number }}</td>
-        <td>{{ $r->month->format('M Y') }}</td>
+        <td>{{ $r->month->format('d M Y') }}</td>
         <td>{{ $r->electricity_kwh }} kWh — ${{ number_format($r->electricity_cost,2) }}</td>
         <td>{{ $r->water_m3 }} m³ — ${{ number_format($r->water_cost,2) }}</td>
         <td style="font-weight:700;">${{ number_format($r->total_cost,2) }}</td>
